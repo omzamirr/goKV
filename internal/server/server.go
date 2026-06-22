@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -27,5 +29,20 @@ func (s *Server) ListenAndServe() error {
 
 	defer listener.Close()
 
-	return nil
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println("Failed to accept connection", err)
+			continue
+		}
+
+		go handleClient(conn)
+	}
+}
+
+func handleClient(conn net.Conn) {
+	defer conn.Close()
+	fmt.Printf("New connection established from: %s\n", conn.RemoteAddr())
+
+	conn.Write([]byte("Hello from the server!\n"))
 }
