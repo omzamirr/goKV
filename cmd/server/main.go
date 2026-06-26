@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/omzamirr/internal/server"
+	server "github.com/omzamirr/internal/server"
 	"github.com/omzamirr/internal/store"
 )
 
