@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -44,5 +45,11 @@ func handleClient(conn net.Conn) {
 	defer conn.Close()
 	fmt.Printf("New connection established from: %s\n", conn.RemoteAddr())
 
-	conn.Write([]byte("Hello from the server!\n"))
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		log.Printf("Client sent: %s\n", msg)
+		conn.Write([]byte("Received: " + msg + "\n"))
+	}
+
 }
