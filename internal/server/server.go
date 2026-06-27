@@ -100,6 +100,20 @@ func (s *Server) handleClient(conn net.Conn) {
 				conn.Write([]byte("0\n"))
 			}
 
+		case "EXISTS":
+			if len(parts) < 2 {
+				conn.Write([]byte("ERR syntax: EXISTS <key>\n"))
+				continue
+			}
+
+			key := parts[1]
+			exists := s.Store.Exists(key)
+			if exists {
+				conn.Write([]byte("1\n"))
+			} else {
+				conn.Write([]byte("0\n"))
+			}
+
 		default:
 			conn.Write([]byte("ERR unknown command '" + cmd + "'\n"))
 		}
