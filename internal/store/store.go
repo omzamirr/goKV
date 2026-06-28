@@ -21,15 +21,27 @@ func New() *Store {
 	}
 }
 
-func (s *Store) Set(key string, value string) {
+func (s *Store) Set(key string, value string, ttl time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data[key] = item{
-		value: value,
+	var expiresAt time.Time
+
+	if ttl > 0 {
+		expiresAt = time.Now().Add(ttl)
 	}
+
+	s.data[key] = item{
+		value:     value,
+		expiresAt: expiresAt,
+	}
+
 }
 
+// Get retrieves a key's value from the store.
+// It implements "Passive Eviction" (Lazy Expiration): if a key has an expiration
+// deadline and that deadline has passed, the function deletes the key from
+// memory on the fly and returns as if it never existed.
 func (s *Store) Get(key string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -60,9 +72,18 @@ func (s *Store) Del(key string) bool {
 }
 
 func (s *Store) Exists(key string) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	_, ok := s.data[key]
-	return ok
+	item, ok := s.data[key]
+	if !ok {
+		return false
+	}
+
+	if !item.expiresAt.IsZero() && time.Now().After(item.expiresAt) {
+		delete(s.data, key)
+		return false
+	}
+
+	return true
 }
