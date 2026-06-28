@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/omzamirr/internal/store"
 )
@@ -66,10 +68,23 @@ func (s *Server) handleClient(conn net.Conn) {
 				conn.Write([]byte("ERR syntax: SET <key> <value>\n"))
 				continue
 			}
+			var value string
+			var ttl time.Duration
 			key := parts[1]
-			value := strings.Join(parts[2:], " ")
 
-			s.Store.Set(key, value)
+			lastInx := len(parts) - 1
+			ttlSecs, err := strconv.Atoi(parts[lastInx])
+
+			if err == nil && len(parts) > 3 {
+				value = strings.Join(parts[2:lastInx], " ")
+				ttl = time.Duration(ttlSecs) * time.Second
+			} else {
+				value = strings.Join(parts[2:], " ")
+				ttl = 0
+			}
+
+			log.Printf("Parsed Command -> Key: %q, Value: %q, TTL: %v\n", key, value, ttl)
+			s.Store.Set(key, value, ttl)
 			conn.Write([]byte("OK\n"))
 
 		case "GET":

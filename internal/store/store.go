@@ -1,6 +1,7 @@
 package store
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -47,6 +48,11 @@ func (s *Store) Get(key string) (string, bool) {
 	defer s.mu.Unlock()
 
 	item, ok := s.data[key]
+	if ok {
+		log.Printf("Store Engine -> Key: %q found. ExpiresAt: %v, CurrentTime: %v\n", key, item.expiresAt, time.Now())
+	} else {
+		log.Printf("Store Engine -> Key: %q NOT found in map at all!\n", key)
+	}
 	if !ok {
 		return "", false
 	}
