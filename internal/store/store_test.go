@@ -12,7 +12,7 @@ func TestPassiveEviction(t *testing.T) {
 	// 2. Set a key that should expire incredibly fast (50 milliseconds)
 	s.Set("flash", "now you see me", 50*time.Millisecond)
 
-	// 3. Immediately try to Get it. It should still be alive!
+	// 3. Immediately try to Get it. It should still be alive
 	val, ok := s.Get("flash")
 	if !ok || val != "now you see me" {
 		t.Fatalf("Expected key to be alive immediately, got ok=%v, val=%s", ok, val)
