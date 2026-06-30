@@ -10,13 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/omzamirr/internal/persistence"
 	"github.com/omzamirr/internal/store"
 )
 
 type Server struct {
-	Addr  string
-	Store *store.Store
-	Mu    sync.Mutex
+	Addr   string
+	Store  *store.Store
+	Mu     sync.Mutex
+	Logger *persistence.AofLogger
 }
 
 func New(addr string, kvStore *store.Store) *Server {
@@ -85,6 +87,12 @@ func (s *Server) handleClient(conn net.Conn) {
 
 			log.Printf("Parsed Command -> Key: %q, Value: %q, TTL: %v\n", key, value, ttl)
 			s.Store.Set(key, value, ttl)
+
+			err = s.Logger.Write(msg)
+			if err != nil {
+				log.Printf("Failed to write to AOF: %v\n", err)
+			}
+
 			conn.Write([]byte("OK\n"))
 
 		case "GET":
@@ -110,6 +118,10 @@ func (s *Server) handleClient(conn net.Conn) {
 
 			deleted := s.Store.Del(key)
 			if deleted {
+				err := s.Logger.Write(msg)
+				if err != nil {
+					log.Printf("Failed to write DEL to AOF: %v\n", err)
+				}
 				conn.Write([]byte("1\n"))
 			} else {
 				conn.Write([]byte("0\n"))
@@ -133,4 +145,17 @@ func (s *Server) handleClient(conn net.Conn) {
 			conn.Write([]byte("ERR unknown command '" + cmd + "'\n"))
 		}
 	}
+}
+
+func NewServer(store *store.Store, addr string, aofPath string) (*Server, error) {
+	aof, err := persistence.NewAofLogger(aofPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Server{
+		Addr:   addr,
+		Store:  store,
+		Logger: aof,
+	}, nil
 }
